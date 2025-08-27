@@ -70,3 +70,21 @@ def _extract_previous_user_text(
     matches: List[str] = [
         pattern for pattern in RECOVERY_PATTERNS if re.search(pattern, latest_lower)
     ]
+
+    if not matches:
+        # Handle short acknowledgements that follow a recovery phrase in the
+        # immediately previous user turn (for example "yes" or "thanks").
+        prev_text = _extract_previous_user_text(history, latest_input)
+        prev_lower = (prev_text or "").lower()
+        if prev_lower and any(
+            re.search(pattern, prev_lower) for pattern in RECOVERY_PATTERNS
+        ) and any(
+            re.fullmatch(pattern, latest_lower.strip()) for pattern in CONFIRMATION_ONLY_PATTERNS
+        ):
+            matches = [pattern for pattern in RECOVERY_PATTERNS if re.search(pattern, prev_lower)]
+
+    return {
+        "recovered": bool(matches),
+        "matches": matches,
+        "window": latest_input,
+    }
