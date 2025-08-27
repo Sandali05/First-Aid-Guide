@@ -22,3 +22,14 @@ KNOWN_EMERGENCY_TERMS = {
     "dizzy", "headache", "migraine", "cut", "laceration", "wound",
     "pain",
 }
+
+
+def _gather_user_context(history: Optional[List[Dict]], user_input: str) -> str:
+    """Return a condensed text string describing the recent user context."""
+    if not history:
+        return user_input
+    user_turns = [m.get("content", "")
+                  for m in history if m.get("role") == "user"]
+    user_turns.append(user_input)
+    # Keep the last 3 user turns to stay focused on the current issue.
+    return " \n".join(user_turns[-3:]).strip()
