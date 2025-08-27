@@ -58,3 +58,15 @@ def _extract_previous_user_text(
     if prev == latest_input:
         return None
     return prev
+
+
+    def detect(history: Optional[Iterable[MessageLike]], latest_input: str) -> Dict[str, object]:
+    """Detect whether the user has indicated recovery.
+
+    Returns a dictionary so downstream callers can attach this agent's
+    observations to their own payloads.
+    """
+    latest_lower = (latest_input or "").lower()
+    matches: List[str] = [
+        pattern for pattern in RECOVERY_PATTERNS if re.search(pattern, latest_lower)
+    ]
