@@ -28,3 +28,33 @@ CONFIRMATION_ONLY_PATTERNS: List[str] = [
 ]
 
 MessageLike = Union[Dict[str, str], object]
+
+
+def _extract_user_content(message: MessageLike) -> Optional[str]:
+    """Return the user-authored text from a chat message like object."""
+    if isinstance(message, dict):
+        if message.get("role") != "user":
+            return None
+        return message.get("content") or ""
+    role = getattr(message, "role", None)
+    if role != "user":
+        return None
+    return getattr(message, "content", "") or ""
+
+
+def _extract_previous_user_text(
+    history: Optional[Iterable[MessageLike]], latest_input: str
+) -> Optional[str]:
+    """Return the most recent user-authored text preceding the latest input."""
+    if not history:
+        return None
+
+    prev: Optional[str] = None
+    for item in history:
+        content = _extract_user_content(item)
+        if content is not None:
+            prev = content
+
+    if prev == latest_input:
+        return None
+    return prev
