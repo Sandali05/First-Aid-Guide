@@ -144,3 +144,40 @@ def _fallback_steps(query: str, category: str = "") -> str:
     )
 
 
+def generate(query: str, *, category: str = "", severity: str = "") -> Dict:
+    category_hint = (category or "").strip()
+    severity_hint = (severity or "").strip()
+
+    search_query = f"{category_hint} {query}".strip()
+    context_docs = retrieve_context(search_query or query)
+    context_text = "\n\n".join([d.get('document', {}).get('text','') for d in context_docs])
+    # Safety against long contexts
+    context_text = "\n\n".join(chunk_text(context_text, 400))
+    try:
+        url = GROQ_CHAT_URL if MODEL_PREFERENCE == "groq" else OPENAI_CHAT_URL
+        token = GROQ_API_KEY if MODEL_PREFERENCE == 'groq' else OPENAI_API_KEY
+        if not token:
+            raise RuntimeError("Missing API key for selected provider")
+        headers = {"Authorization": f"Bearer {token}"}
+        model = "llama-3.1-70b-versatile" if MODEL_PREFERENCE == "groq" else "gpt-4o-mini"
+        user_prompt = f"User description: {query}"
+        if category_hint:
+            user_prompt += f"\nLikely emergency category: {category_hint}."
+        if severity_hint:
+            user_prompt += f"\nReported severity: {severity_hint}."
+        r = requests.post(url, headers=headers, json={
+            "model": model,
+            "messages":[
+                {"role":"system","content":SYSTEM},
+                {"role":"user","content":f"{user_prompt}\n\ncontext:\n{context_text}\n\nReturn numbered steps."}
+            ],
+            "temperature":0.2
+        }, timeout=20)
+        r.raise_for_status()
+        content = r.json().get("choices",[{}])[0].get("message",{}).get("content","")
+        if not content or content.strip().lower() == "no response":
+            raise ValueError("Instruction provider returned no usable content")
+    except Exception as exc:
+        logging.warning("Chat generation failed: %s", exc)
+        content = _fallback_steps(query, category_hint)
+    return {"steps": content, "sources": [d.get('document',{}).get('_id') for d in context_docs]}
