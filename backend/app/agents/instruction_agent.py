@@ -100,3 +100,47 @@ SCENARIO_LIBRARY = [
             "4) Elevate above heart level and seek care if you can't bear weight or suspect a fracture."
         ),
     },
+    {
+        "labels": {"fracture", "broken bone"},
+        "keywords": ["fracture", "broken bone", "break"],
+        "steps": (
+            "1) Immobilize the injured area in the position found; don't realign the limb.\n"
+            "2) Apply cold packs wrapped in cloth to reduce swelling.\n"
+            "3) Keep the person still and calm while you wait for help.\n"
+            "4) Call emergency services or get medical help immediately."
+        ),
+    },
+    {
+        "labels": {"allergic reaction", "anaphylaxis"},
+        "keywords": ["allergic", "anaphylaxis", "anaphylactic", "hives", "swelling"],
+        "steps": (
+            "1) Ask if the person has an epinephrine auto-injector and help them use it.\n"
+            "2) Call emergency services right away.\n"
+            "3) Lay the person flat with legs raised unless they're having trouble breathing.\n"
+            "4) If trained, begin CPR if they stop breathing or lose pulse."
+        ),
+    },
+]
+
+
+def _fallback_steps(query: str, category: str = "") -> str:
+    """Return simple, rule-based guidance when LLM calls are unavailable."""
+    text = query.lower()
+    category_lower = (category or "").lower()
+
+    for scenario in SCENARIO_LIBRARY:
+        if category_lower and category_lower in scenario["labels"]:
+            return scenario["steps"]
+
+    for scenario in SCENARIO_LIBRARY:
+        if any(k in text for k in scenario["keywords"]):
+            return scenario["steps"]
+
+    return (
+        "1) Move to a safe, comfortable position and stay calm.\n"
+        "2) Check for bleeding, breathing difficulties, or other urgent symptoms.\n"
+        "3) Use cool compresses, rest, or hydration as appropriate for comfort.\n"
+        "4) Contact a healthcare professional or emergency services if symptoms worsen or you are unsure."
+    )
+
+
