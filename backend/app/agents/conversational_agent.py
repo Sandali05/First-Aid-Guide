@@ -33,3 +33,48 @@ def _gather_user_context(history: Optional[List[Dict]], user_input: str) -> str:
     user_turns.append(user_input)
     # Keep the last 3 user turns to stay focused on the current issue.
     return " \n".join(user_turns[-3:]).strip()
+
+
+def _detect_clarification_prompt(text: str) -> Optional[str]:
+    """Look for likely typos or ambiguous medical terms and craft a prompt."""
+    tokens = re.findall(r"[a-zA-Z']+", text.lower())
+    for token in tokens:
+        if token in KNOWN_EMERGENCY_TERMS or len(token) < 4:
+            continue
+        match = get_close_matches(
+            token, KNOWN_EMERGENCY_TERMS, n=1, cutoff=0.78)
+        if match:
+            guess = match[0]
+            return (
+                f"Got it — when you say “{token},” do you mean “{guess}” (an injury to the skin causing discoloration) "
+                "or something else? If it’s that injury I can walk you through first-aid. If it’s different, could you clarify?"
+            )
+    return None
+
+
+def handle_message(
+    user_input: str,
+    history: Optional[List[Dict]] = None,
+    session_id: Optional[str] = None,
+) -> Dict:
+    try:
+        # 0) Pull recent conversational context so the pipeline sees the full story.
+        context_text = _gather_user_context(history, user_input)
+
+        # 1) Security & privacy layer
+        sec = security_agent.protect(context_text)
+
+        latest_security = security_agent.protect(user_input)
+        sanitized_latest = latest_security.get("sanitized", user_input)
+        security_scope_hint = latest_security.get("in_scope")
+
+        classifier_gate = emergency_classifier.classify_text(sanitized_latest)
+
+        # 2) Detect recovery cues so downstream components can conclude safely.
+        recovery = recovery_agent.detect(history or [], user_input)
+
+        in_scope = classifier_gate.get("is_first_aid", False)
+        if security_scope_hint is False:
+            in_scope = False
+        elif security_scope_hint is True:
+            in_scope = True
