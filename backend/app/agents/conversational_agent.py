@@ -78,3 +78,36 @@ def handle_message(
             in_scope = False
         elif security_scope_hint is True:
             in_scope = True
+
+        conversation_meta = {
+            "context": context_text,
+            "recovered": recovery.get("recovered"),
+            "in_scope": in_scope,
+            "needs_clarification": False,
+            "clarification_prompt": None,
+            "classifier_gate": classifier_gate,
+        }
+        if session_id:
+            conversation_meta["session_id"] = session_id
+
+        if not in_scope:
+            risk_stub = score_risk_confidence(
+                {"category": "out_of_scope", "severity": "low"},
+                {"passed": False, "skipped": True},
+            )
+            return {
+                "rejected": True,
+                "reason": "This assistant can only discuss first-aid emergencies and treatments.",
+                "security": {**sec, "latest_sanitized": sanitized_latest},
+                "triage": {
+                    "category": "out_of_scope",
+                    "severity": "low",
+                    "keywords": [],
+                    "confidence": classifier_gate.get("confidence", 0.0),
+                },
+                "instructions": {"steps": []},
+                "verification": {"passed": False, "skipped": True},
+                "risk_confidence": risk_stub,
+                "conversation": conversation_meta,
+                "recovery": recovery,
+            }
