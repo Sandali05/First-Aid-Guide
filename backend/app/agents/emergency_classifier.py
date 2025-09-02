@@ -76,3 +76,25 @@ def classify_text(text: str) -> Dict[str, object]:
         "confidence": round(confidence, 3),
         "label": label,
     }
+
+
+def _rule_based_classification(text: str) -> Dict[str, object]:
+    lowered = text.lower()
+    category = "unknown"
+    matched_keywords: List[str] = []
+    for label, keywords in _CATEGORY_RULES:
+        if any(keyword in lowered for keyword in keywords):
+            category = label
+            matched_keywords = keywords[:3]
+            break
+
+    severity = "low"
+    if category in _SEVERITY_HINTS:
+        severity = _SEVERITY_HINTS[category]
+    elif any(term in lowered for term in ("severe", "heavy", "worse", "worsening", "can't breathe", "cant breathe")):
+        severity = "high"
+    elif any(term in lowered for term in ("swelling", "bad", "painful", "deep", "large")):
+        severity = "medium"
+
+    return {"category": category, "severity": severity, "keywords": matched_keywords}
+
