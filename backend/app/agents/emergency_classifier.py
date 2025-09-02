@@ -98,3 +98,23 @@ def _rule_based_classification(text: str) -> Dict[str, object]:
 
     return {"category": category, "severity": severity, "keywords": matched_keywords}
 
+
+def classify(text: str) -> Dict[str, object]:
+    """Maintain compatibility for callers needing triage metadata."""
+
+    gate = classify_text(text)
+    if not gate.get("is_first_aid"):
+        return {
+            "category": "out_of_scope",
+            "severity": "low",
+            "keywords": [],
+            "confidence": gate.get("confidence", 0.0),
+        }
+
+    triage = _rule_based_classification(text)
+    triage["confidence"] = gate.get("confidence", 0.0)
+    triage["label"] = gate.get("label", "")
+    return triage
+
+
+__all__ = ["classify_text", "classify"]
