@@ -31,3 +31,17 @@ _OFF_TOPIC_KEYWORDS = {
     "basketball",
     "football",
 }
+
+
+def safety_screen(user_text: str) -> Dict[str, str]:
+    """Run guardrail and keyword checks to ensure the text is in scope."""
+
+    sanitized = basic_sanitize(user_text)
+    policy_decision = rules_guardrails.policy_check(sanitized)
+    if not policy_decision.get("allowed", False):
+        return {
+            "allowed": False,
+            "reason": policy_decision.get("reason")
+            or "This assistant can only discuss first-aid topics.",
+            "sanitized": sanitized,
+        }
