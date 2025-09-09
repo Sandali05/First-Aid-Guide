@@ -58,3 +58,19 @@ def safety_screen(user_text: str) -> Dict[str, str]:
             }
 
     return {"allowed": True, "reason": "", "sanitized": sanitized}
+
+
+def protect(user_text: str) -> Dict:
+    """Return sanitized text plus a scope hint for downstream agents."""
+
+    screen = safety_screen(user_text)
+    clean = screen.get("sanitized", basic_sanitize(user_text))
+    in_scope = is_first_aid_related(clean, None)
+    return {
+        "sanitized": clean,
+        "redactions": [],
+        "in_scope": in_scope if screen.get("allowed", True) else False,
+    }
+
+
+__all__ = ["safety_screen", "protect"]
