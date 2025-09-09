@@ -45,3 +45,16 @@ def safety_screen(user_text: str) -> Dict[str, str]:
             or "This assistant can only discuss first-aid topics.",
             "sanitized": sanitized,
         }
+
+    lowered = sanitized.lower()
+    for keyword in _OFF_TOPIC_KEYWORDS:
+        if not keyword:
+            continue
+        if re.search(rf"\b{re.escape(keyword)}\b", lowered):
+            return {
+                "allowed": False,
+                "reason": "This assistant can only discuss first-aid emergencies and treatments.",
+                "sanitized": sanitized,
+            }
+
+    return {"allowed": True, "reason": "", "sanitized": sanitized}
