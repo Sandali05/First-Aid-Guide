@@ -6,3 +6,4 @@ import requests
 def get_emergency_numbers(country_code: str = "LK") -> dict:
     # Placeholder: static map for demo; extend with a real API if needed.
      defaults = {"POLICE": "119", "AMBULANCE": "1990", "FIRE": "110"}
+     return {"country": country_code, "numbers": defaults}
