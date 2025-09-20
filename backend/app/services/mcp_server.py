@@ -10,3 +10,4 @@ def get_emergency_numbers(country_code: str = "LK") -> dict:
 
 def get_location_from_maps(query: str) -> dict:
     # Placeholder for a Maps API. Returns a fake, well-formed object.
+     return {"query": query, "lat": 6.9271, "lng": 79.8612, "confidence": 0.7}
