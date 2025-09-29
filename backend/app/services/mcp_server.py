@@ -14,3 +14,4 @@ def get_location_from_maps(query: str) -> dict:
      
 def call_other_api(name: str, payload: dict) -> dict:
     # Placeholder generic API
+    return {"api": name, "ok": True, "echo": payload}
