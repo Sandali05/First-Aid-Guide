@@ -15,3 +15,22 @@ HEADERS = {
     "Content-Type": "application/json",
     "x-cassandra-token": ASTRA_DB_APPLICATION_TOKEN
 } if ASTRA_DB_APPLICATION_TOKEN else {"Content-Type": "application/json"}
+
+
+def upsert_documents(docs: List[Dict[str, Any]]):
+    # docs: [{_id?, text, embedding?, meta?}]
+    if not has_astra():
+        logging.warning("Astra configuration missing; skipping upsert")
+        return []
+    url = f"{BASE}/collections/{ASTRA_DB_COLLECTION}"
+    resps = []
+    for d in docs:
+        try:
+            payload = {"document": d}
+            r = requests.post(url, headers=HEADERS,
+                              data=json.dumps(payload), timeout=10)
+            resps.append((r.status_code, r.text))
+        except Exception as exc:
+            logging.warning("Astra upsert failed: %s", exc)
+            resps.append((0, str(exc)))
+    return resps
