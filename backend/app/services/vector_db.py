@@ -34,3 +34,22 @@ def upsert_documents(docs: List[Dict[str, Any]]):
             logging.warning("Astra upsert failed: %s", exc)
             resps.append((0, str(exc)))
     return resps
+
+
+def similarity_search(embedding: List[float], top_k: int = 4) -> List[Dict[str, Any]]:
+    # Astra JSON API vector search shape
+    if not has_astra() or not embedding:
+        return []
+    try:
+        url = f"{BASE}/collections/{ASTRA_DB_COLLECTION}/vector-search"
+        payload = {"topK": top_k, "vector": embedding,
+                   "includeSimilarity": True}
+        r = requests.post(url, headers=HEADERS,
+                          data=json.dumps(payload), timeout=15)
+        if r.status_code != 200:
+            return []
+        data = r.json()
+        return data.get("documents", [])
+    except Exception as exc:
+        logging.warning("Astra similarity search failed: %s", exc)
+        return []
