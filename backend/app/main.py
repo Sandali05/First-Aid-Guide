@@ -60,3 +60,45 @@ def validate_first_aid_intent(payload: ChatContinueRequest) -> ChatContinueReque
         )
 
     return payload
+
+
+def _normalize_steps(steps) -> str:
+    if isinstance(steps, list):
+        return "\n".join(f"{idx+1}. {s}" for idx, s in enumerate(steps))
+    return str(steps or "")
+
+
+BODY_PART_KEYWORDS = {
+    "head", "face", "scalp", "eye", "ear", "nose", "mouth", "jaw",
+    "neck", "throat", "shoulder", "arm", "elbow", "wrist", "hand",
+    "finger", "chest", "rib", "abdomen", "stomach", "back", "hip",
+    "leg", "knee", "ankle", "foot", "toe", "skin"
+}
+
+TREND_PATTERNS = {
+    "worse": [
+        r"\bgetting worse\b",
+        r"\bworsening\b",
+        r"\bworse\b",
+        r"\bheavier\b",
+        r"\bincreasing\b",
+        r"\bspreading\b",
+        r"\bmore (?:pain|bleeding|swelling|numbness)\b",
+    ],
+    "better": [
+        r"\bgetting better\b",
+        r"\bbetter\b",
+        r"\bimproving\b",
+        r"\bimproved\b",
+        r"\bless (?:pain|bleeding|swelling)\b",
+        r"\blighter\b",
+        r"\bsubsiding\b",
+    ],
+    "same": [
+        r"\babout the same\b",
+        r"\bstaying the same\b",
+        r"\bno change\b",
+        r"\bunchanged\b",
+        r"\bstable\b",
+    ],
+}
