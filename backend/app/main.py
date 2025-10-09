@@ -277,3 +277,139 @@ def _craft_follow_up_question(
         return "Where on your body are you feeling this the most?"
 
     return "Is there anything new or changing that I should know about right now?"
+
+
+def _compose_assistant_message(
+    result: dict,
+    user_text: str,
+    history: List[ChatMessage],
+    recovery: Optional[dict],
+) -> str:
+    conversation_meta = result.get("conversation", {}) if isinstance(result, dict) else {}
+    recovered_flag = bool(recovery and recovery.get("recovered"))
+
+    if result.get("error"):
+        return (
+            "I’m sorry — something went wrong while processing that. "
+            "Please try again, and if it keeps failing seek emergency care if you’re in danger."
+        )
+
+    if recovered_flag:
+        return dedent("""
+            I’m really glad to hear things are feeling better now. If anything changes or the symptoms return, reach out to a healthcare professional or call your local emergency number. Take care!
+        """).strip()
+
+    triage = result.get("triage", {})
+    sanitized_latest = result.get("security", {}).get("latest_sanitized", user_text)
+
+    conversation_scope = conversation_meta.get("in_scope")
+    if conversation_scope is None:
+        conversation_scope = is_first_aid_related(sanitized_latest, triage)
+
+    if not conversation_scope:
+        return dedent("""
+            I’m built to help with first-aid concerns. If you have a medical question or emergency, please share the symptoms or injuries you’re experiencing.
+        """).strip()
+
+    if conversation_meta.get("needs_clarification"):
+        prompt = conversation_meta.get("clarification_prompt")
+        if prompt:
+            return prompt
+        return (
+            "I want to be sure I understand the situation. Could you share what happened, where it hurts, and how severe it is?"
+        )
+
+    severity = triage.get("severity") or triage.get("level") or "unknown"
+    category = triage.get("category") or triage.get("emergency") or "concern"
+
+    steps_raw = result.get("instructions", {}).get("steps")
+    steps_text = _normalize_steps(steps_raw).strip()
+    if not steps_text:
+        steps_text = dedent("""
+            1. Move to a safe position and stay calm.
+            2. Check for bleeding, breathing trouble, or other severe signs.
+            3. Use rest, ice, or gentle pressure as appropriate for comfort.
+            4. Contact emergency services if symptoms worsen or you’re unsure.
+        """).strip()
+
+    numbers = result.get("tools", {}).get("emergency_numbers", {}).get("numbers", {})
+    ambulance_number = numbers.get("AMBULANCE") or numbers.get("ambulance") or "local emergency number"
+
+    verification = result.get("verification", {})
+    verification_note = ""
+    if not verification.get("passed", True):
+        verification_note = (
+            "\n\n⚠️ I noticed something that may conflict with our safety checks. "
+            "Please double-check with emergency services or a medical professional."
+        )
+
+    severity_language = {
+        "high": "serious",
+        "medium": "moderate",
+        "low": "mild",
+    }
+    severity_text = severity_language.get(str(severity).lower(), "uncertain")
+
+    user_trend = _detect_trend(user_text)
+    last_assistant_msg = next((m for m in reversed(history) if getattr(m, "role", None) == "assistant"), None)
+    repeated_steps = bool(
+        last_assistant_msg
+        and steps_text
+        and steps_text in (last_assistant_msg.content if getattr(last_assistant_msg, "content", None) else "")
+    )
+    steps_text = _tailor_steps_for_context(
+        steps_text,
+        triage,
+        user_trend,
+        severity,
+        ambulance_number,
+        repeated_steps,
+    )
+
+    acknowledgement = _acknowledge_user_update(user_text, recovered_flag)
+    follow_up = _craft_follow_up_question(result, history, user_text, recovered_flag)
+
+    critical_hint = ""
+    if str(severity).lower() in {"high", "severe"}:
+        critical_hint = (
+            f"If anything feels life-threatening, call emergency services immediately (dial {ambulance_number}).\n\n"
+        )
+
+    caution_note = ""
+    severity_level = str(severity).lower()
+    if not verification_note and (
+        severity_level in {"high", "severe", "serious"}
+        or (user_trend == "worse" and severity_level not in {"low", "mild"})
+    ):
+        caution_note = (
+            "\n\n⚠️ I noticed something that may conflict with our safety checks. "
+            "Please double-check with emergency services or a medical professional."
+        )
+
+    response = dedent(f"""
+        I’m here to help.
+
+        🩺 What I’m seeing
+        • Concern type: {category}
+        • Severity: {severity_text}
+
+        ✅ Trusted first-aid steps
+        {steps_text}
+    """).strip()
+
+    response = response + verification_note + caution_note
+
+    if acknowledgement:
+        response = response + "\n\n" + acknowledgement
+
+    if follow_up:
+        response = response + "\n\n" + follow_up
+
+    if critical_hint:
+        response = "If you feel faint, see heavy bleeding, or anything seems life-threatening, call emergency services immediately.\n\n" + response
+
+    return response
+
+
+app = FastAPI(title="FirstAidGuide - Multi-Agent API")
+
