@@ -217,3 +217,63 @@ def _acknowledge_user_update(user_text: str, recovered: bool) -> str:
     if trend == "same":
         return "Thanks for the update that things feel about the same."
     return ""
+
+
+def _craft_follow_up_question(
+    result: dict,
+    history: List[ChatMessage],
+    user_text: str,
+    recovered: bool,
+) -> str:
+    triage = result.get("triage", {}) if isinstance(result, dict) else {}
+    category = (triage.get("category") or triage.get("emergency") or "concern").lower()
+    severity = str(triage.get("severity") or triage.get("level") or "").lower()
+
+    user_history_text = " \n".join(
+        msg.content for msg in history if getattr(msg, "role", None) == "user"
+    )
+    combined_context = f"{user_history_text}\n{user_text}".strip()
+
+    if recovered:
+        return ""
+
+    location_known = _detect_location_known(combined_context)
+    trend_known = _detect_trend(combined_context)
+
+    severe_categories = {"bleeding", "hemorrhage", "wound"}
+    burn_categories = {"burn", "scald"}
+    sprain_categories = {"sprain", "strain", "bruise", "contusion"}
+    fracture_categories = {"fracture", "break"}
+
+    if severity in {"high", "severe"}:
+        return (
+            "Do you notice any life-threatening signs such as heavy bleeding that won’t slow down, trouble breathing, or loss of consciousness?"
+        )
+
+    if category in severe_categories or any(cat in category for cat in severe_categories):
+        if not location_known:
+            return "Where is the bleeding coming from and how wide is the injured area?"
+        if not trend_known:
+            return "Is the bleeding slowing down, staying the same, or getting heavier despite pressure?"
+        return "Have you been able to keep steady pressure with clean fabric or gauze on it for a full 10 minutes yet?"
+
+    if category in burn_categories:
+        if not location_known:
+            return "Which part of the body was burned and how large is the area?"
+        return "Are there blisters, charring, or deep white patches on the burn?"
+
+    if category in sprain_categories:
+        if not trend_known:
+            return "Is the swelling improving, staying the same, or getting worse right now?"
+        return "Can you still move the area, or does the pain spike when you try to bear weight or grip?"
+
+    if category in fracture_categories:
+        return "Can you avoid moving the injured limb and are you seeing any obvious deformity or numbness?"
+
+    if not trend_known:
+        return "Are the symptoms improving, staying the same, or getting worse at this moment?"
+
+    if not location_known:
+        return "Where on your body are you feeling this the most?"
+
+    return "Is there anything new or changing that I should know about right now?"
