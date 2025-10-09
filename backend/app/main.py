@@ -187,3 +187,33 @@ def _tailor_steps_for_context(
         "3. Rest, hydrate, and avoid stress on the affected area while you monitor.",
         f"4. Reach a healthcare professional or {ambulance_number or 'emergency services'} promptly if anything changes or you’re unsure.",
     ])
+
+def _detect_location_known(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(re.search(rf"\b{re.escape(part)}\b", lowered) for part in BODY_PART_KEYWORDS)
+
+
+def _detect_trend(text: str) -> Optional[str]:
+    if not text:
+        return None
+    lowered = text.lower()
+    for label, patterns in TREND_PATTERNS.items():
+        for pattern in patterns:
+            if re.search(pattern, lowered):
+                return label
+    return None
+
+
+def _acknowledge_user_update(user_text: str, recovered: bool) -> str:
+    if recovered:
+        return "I’m really glad to hear those symptoms have cleared up."
+    trend = _detect_trend(user_text)
+    if trend == "worse":
+        return "Thanks for telling me it’s getting worse — let’s work to slow it down."
+    if trend == "better":
+        return "I’m glad it seems to be improving a bit."
+    if trend == "same":
+        return "Thanks for the update that things feel about the same."
+    return ""
