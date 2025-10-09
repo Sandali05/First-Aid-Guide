@@ -28,3 +28,35 @@ class ChatContinueRequest(BaseModel):
 
 
 FIRST_AID_ONLY_MESSAGE = "This assistant can only respond to first-aid emergencies and treatments."
+
+
+def _latest_user_message(messages: List[ChatMessage]) -> Optional[ChatMessage]:
+    for message in reversed(messages):
+        if message.role == "user":
+            return message
+    return None
+
+
+def validate_first_aid_intent(payload: ChatContinueRequest) -> ChatContinueRequest:
+    latest_user = _latest_user_message(payload.messages)
+    if latest_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=FIRST_AID_ONLY_MESSAGE,
+        )
+
+    screen = security_agent.safety_screen(latest_user.content)
+    if not screen.get("allowed", False):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=screen.get("reason") or FIRST_AID_ONLY_MESSAGE,
+        )
+
+    classification = emergency_classifier.classify_text(screen.get("sanitized", latest_user.content))
+    if not classification.get("is_first_aid"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=FIRST_AID_ONLY_MESSAGE,
+        )
+
+    return payload
