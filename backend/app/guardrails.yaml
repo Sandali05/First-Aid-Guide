@@ -8,6 +8,8 @@ disallowed_topics:
   - travel
   - legal
   - sports
+  - cookery
+  - baking
 output_rules:
   - "Never claim to be a doctor."
   - "Encourage seeking professional help for severe symptoms."

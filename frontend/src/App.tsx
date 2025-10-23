@@ -12,18 +12,35 @@ body {
 
 .chat-app {
   min-height: 100vh;
-  background: #f5f6fb;
+  background-color: #f5f6fb;
+  background-image: url('https://i.pinimg.com/originals/4c/98/4e/4c984ef0291409fef0a0942b391f6287.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-attachment: fixed;
   color: #1f1f3d;
   padding: 32px;
   box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
+}
+
+.chat-app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(245, 246, 251, 0.88);
+  z-index: -1;
 }
 
 .chat-shell {
-  max-width: 1180px;
+  max-width: 1600px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  position: relative;
+  z-index: 1;
 }
 
 .chat-header {
@@ -37,7 +54,7 @@ body {
 }
 
 .chat-header h1 {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   margin: 0 0 6px;
 }
@@ -50,7 +67,7 @@ body {
 
 .chat-header .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .chat-header .pill-button {
@@ -69,15 +86,21 @@ body {
 }
 
 .chat-layout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  order: 2;
+  max-width: 320px;
+  width: 100%;
+  margin-left: auto;
+  position: sticky;
+  top: 0;
 }
 
 .sidebar-card {
@@ -183,8 +206,11 @@ body {
 
 .main-panel {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   flex-direction: column;
   gap: 18px;
+  order: 1;
 }
 
 .conversation-card {
@@ -220,19 +246,36 @@ body {
   font-weight: 600;
 }
 
-.tag-row {
+.quick-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.tag {
-  padding: 6px 12px;
+.quick-button {
+  border: none;
+  padding: 8px 16px;
   border-radius: 999px;
-  background: #f6f7fb;
-  color: #464668;
+  background: rgba(222, 222, 225, 0.12);
+  color: #464678ff;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quick-button:hover {
+  background: rgba(89, 92, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(89, 92, 255, 0.18);
+}
+
+.quick-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .messages {
@@ -323,6 +366,8 @@ textarea.chat-input {
   font-size: 15px;
   resize: vertical;
   font-family: inherit;
+  box-sizing: border-box;
+  display: block;
 }
 
 .action-row {
@@ -362,12 +407,26 @@ textarea.chat-input {
 }
 
 @media (max-width: 960px) {
+  .chat-shell::before,
+  .chat-shell::after {
+    display: none;
+  }
+
   .chat-layout {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 20px;
   }
 
   .sidebar {
     order: 2;
+    position: static;
+    max-width: none;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .main-panel {
+    order: 1;
   }
 }
 `
@@ -376,6 +435,8 @@ type QuickVideo = {
   id: string
   title: string
   description: string
+  url: string
+  imageUrl: string
 }
 
 type DisplayMessage = ChatMessage & {
@@ -386,6 +447,8 @@ type DisplayMessage = ChatMessage & {
 const mapSearchUrl = 'https://www.google.com/maps/search/nearest+hospitals%2Fmedi+help/'
 
 const generateId = () => Math.random().toString(36).slice(2, 10)
+
+const sanitizeContent = (content: string) => content.replace(/\*\*/g, '')
 
 const createDisplayMessage = (message: ChatMessage, timestamp?: Date): DisplayMessage => ({
   ...message,
@@ -438,22 +501,33 @@ export default function App() {
   const quickVideos: QuickVideo[] = useMemo(
     () => [
       {
-        id: '6wxN4cQ_kJw',
+        id: 'severe-bleeding',
         title: 'Severe bleeding',
         description: 'Stop bleeding fast with direct pressure and elevation.',
-        href:'https://youtu.be/UsCUXuYKoJQ?si=Cj9Q72wXKTAnmygq'
+        url: 'https://youtu.be/p9KHec6xfuw?si=5CFsfHX1Kb4-cPBg',
+        imageUrl:
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbbzL1xbwqtpvxFrE0tfOEpkujg_QFphzY3A&s'
       },
       {
-        id: 'By5-H7Y5KQM',
+        id: 'cpr-basics',
         title: 'CPR basics',
-        description: 'Hands-only CPR technique for adults and teens.'
+        description: 'Hands-only CPR technique for adults and teens.',
+        url: 'https://youtu.be/TsJ49Np3HS0?si=nGaGMFFmP2XEtcpu',
+        imageUrl: 'https://skillstrainingcollege.com.au/wp-content/uploads/2022/12/Blog-CPR-960-%C3%97-540px.png'
       },
       {
-        id: 'G8kG3CNs8Ts',
+        id: 'burn-treatment',
         title: 'Burn treatment',
-        description: 'Cool the burn and cover it safely until help arrives.'
+        description: 'Cool the burn and cover it safely until help arrives.',
+        url: 'https://youtu.be/v2mY1h0BdTw?si=rZAVjQr2GyP1xi1t',
+        imageUrl: 'https://hurak.com/blog/wp-content/uploads/2025/01/first-aid-tips-for-burn.webp'
       }
     ],
+    []
+  )
+
+  const quickPrompts = useMemo(
+    () => ['CPR steps', 'Stopping bleeding', 'Burn care', 'Sprain support'],
     []
   )
 
@@ -521,6 +595,11 @@ export default function App() {
     }
   }
 
+  const onQuickPrompt = (prompt: string) => {
+    if (loading) return
+    setInput(prompt)
+  }
+
   const activeMessages = messages.length === 0 ? defaultConversation : messages
 
   return (
@@ -567,12 +646,12 @@ export default function App() {
                   <a
                     key={video.id}
                     className="video-card"
-                    href={`https://www.youtube.com/watch?v=${video.id}`}
+                    href={video.url}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <img
-                      src={`https://img.youtube.com/vi/${video.id}/hqdefault.jpg`}
+                      src={video.imageUrl}
                       alt={`${video.title} thumbnail`}
                       loading="lazy"
                     />
@@ -598,18 +677,25 @@ export default function App() {
                     Conversation
                   </p>
                 </div>
-                <div className="tag-row">
-                  <span className="tag">CPR steps</span>
-                  <span className="tag">Stopping bleeding</span>
-                  <span className="tag">Burn care</span>
-                  <span className="tag">Sprain support</span>
+                <div className="quick-actions">
+                  {quickPrompts.map(prompt => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      className="quick-button"
+                      onClick={() => onQuickPrompt(prompt)}
+                      disabled={loading}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="messages">
                 {activeMessages.map(message => (
                   <div key={message.id} className={`message ${message.role}`}>
-                    <div className="message-content">{message.content}</div>
+                    <div className="message-content">{sanitizeContent(message.content)}</div>
                     <div className="message-meta">
                       <span className="message-author">
                         {message.role === 'assistant'

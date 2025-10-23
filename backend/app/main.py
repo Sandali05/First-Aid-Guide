@@ -52,9 +52,20 @@ def validate_first_aid_intent(payload: ChatContinueRequest) -> ChatContinueReque
             detail=screen.get("reason") or FIRST_AID_ONLY_MESSAGE,
         )
 
-    classification = emergency_classifier.classify_text(
-        screen.get("sanitized", latest_user.content))
+    classification = emergency_classifier.classify_text(screen.get("sanitized", latest_user.content))
     if not classification.get("is_first_aid"):
+        user_turns = [m.content for m in payload.messages if m.role == "user"]
+        if len(user_turns) > 1:
+            context_text = "\n".join(user_turns[-3:]).strip()
+            if context_text and context_text != latest_user.content.strip():
+                context_screen = security_agent.safety_screen(context_text)
+                if context_screen.get("allowed", True):
+                    context_classification = emergency_classifier.classify_text(
+                        context_screen.get("sanitized", context_text)
+                    )
+                    if context_classification.get("is_first_aid"):
+                        return payload
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=FIRST_AID_ONLY_MESSAGE,
@@ -118,8 +129,7 @@ def _tailor_steps_for_context(
     if not repeated_steps:
         return original_steps
 
-    category = (triage.get("category") or triage.get(
-        "emergency") or "").lower()
+    category = (triage.get("category") or triage.get("emergency") or "").lower()
     severity_normalized = str(severity_raw or "").lower()
 
     def _format(lines: List[str]) -> str:
@@ -190,7 +200,6 @@ def _tailor_steps_for_context(
         f"4. Reach a healthcare professional or {ambulance_number or 'emergency services'} promptly if anything changes or you’re unsure.",
     ])
 
-
 def _detect_location_known(text: str) -> bool:
     if not text:
         return False
@@ -229,8 +238,7 @@ def _craft_follow_up_question(
     recovered: bool,
 ) -> str:
     triage = result.get("triage", {}) if isinstance(result, dict) else {}
-    category = (triage.get("category") or triage.get(
-        "emergency") or "concern").lower()
+    category = (triage.get("category") or triage.get("emergency") or "concern").lower()
     severity = str(triage.get("severity") or triage.get("level") or "").lower()
 
     user_history_text = " \n".join(
@@ -289,8 +297,7 @@ def _compose_assistant_message(
     history: List[ChatMessage],
     recovery: Optional[dict],
 ) -> str:
-    conversation_meta = result.get(
-        "conversation", {}) if isinstance(result, dict) else {}
+    conversation_meta = result.get("conversation", {}) if isinstance(result, dict) else {}
     recovered_flag = bool(recovery and recovery.get("recovered"))
 
     if result.get("error"):
@@ -305,8 +312,7 @@ def _compose_assistant_message(
         """).strip()
 
     triage = result.get("triage", {})
-    sanitized_latest = result.get("security", {}).get(
-        "latest_sanitized", user_text)
+    sanitized_latest = result.get("security", {}).get("latest_sanitized", user_text)
 
     conversation_scope = conversation_meta.get("in_scope")
     if conversation_scope is None:
@@ -338,10 +344,8 @@ def _compose_assistant_message(
             4. Contact emergency services if symptoms worsen or you’re unsure.
         """).strip()
 
-    numbers = result.get("tools", {}).get(
-        "emergency_numbers", {}).get("numbers", {})
-    ambulance_number = numbers.get("AMBULANCE") or numbers.get(
-        "ambulance") or "local emergency number"
+    numbers = result.get("tools", {}).get("emergency_numbers", {}).get("numbers", {})
+    ambulance_number = numbers.get("AMBULANCE") or numbers.get("ambulance") or "local emergency number"
 
     verification = result.get("verification", {})
     verification_note = ""
@@ -359,8 +363,7 @@ def _compose_assistant_message(
     severity_text = severity_language.get(str(severity).lower(), "uncertain")
 
     user_trend = _detect_trend(user_text)
-    last_assistant_msg = next((m for m in reversed(
-        history) if getattr(m, "role", None) == "assistant"), None)
+    last_assistant_msg = next((m for m in reversed(history) if getattr(m, "role", None) == "assistant"), None)
     repeated_steps = bool(
         last_assistant_msg
         and steps_text
@@ -376,8 +379,7 @@ def _compose_assistant_message(
     )
 
     acknowledgement = _acknowledge_user_update(user_text, recovered_flag)
-    follow_up = _craft_follow_up_question(
-        result, history, user_text, recovered_flag)
+    follow_up = _craft_follow_up_question(result, history, user_text, recovered_flag)
 
     critical_hint = ""
     if str(severity).lower() in {"high", "severe"}:
@@ -423,17 +425,14 @@ def _compose_assistant_message(
 
 app = FastAPI(title="FirstAidGuide - Multi-Agent API")
 
-
 class ChatRequest(BaseModel):
     message: str
-
 
 @app.post("/api/chat")
 def chat(req: ChatRequest):
     # Orchestrate the multi-agent flow
     result = conversational_agent.handle_message(req.message)
     return {"ok": True, "result": result}
-
 
 @app.get("/api/health")
 def health():
@@ -477,15 +476,13 @@ def health_details():
     return details
 
 
-ValidatedChatRequest = Annotated[ChatContinueRequest, Depends(
-    validate_first_aid_intent)]
+ValidatedChatRequest = Annotated[ChatContinueRequest, Depends(validate_first_aid_intent)]
 
 
 @app.post("/api/chat/continue")
 def chat_continue(req: ValidatedChatRequest):
     # Find the latest user message (dependency already ensured a user turn exists)
-    last_user = next(m.content for m in reversed(
-        req.messages) if m.role == "user")
+    last_user = next(m.content for m in reversed(req.messages) if m.role == "user")
 
     # Run existing pipeline on the last user message
     history_payload = [m.dict() for m in req.messages]
@@ -502,14 +499,11 @@ def chat_continue(req: ValidatedChatRequest):
         )
 
     # Compose assistant-style message
-    recovery_info = result.get(
-        "recovery") if isinstance(result, dict) else None
+    recovery_info = result.get("recovery") if isinstance(result, dict) else None
     if recovery_info is None:
         recovery_info = recovery_agent.detect(history_payload, last_user)
-    assistant_text = _compose_assistant_message(
-        result, last_user, req.messages, recovery_info)
-    new_messages = req.messages + \
-        [ChatMessage(role='assistant', content=assistant_text)]
+    assistant_text = _compose_assistant_message(result, last_user, req.messages, recovery_info)
+    new_messages = req.messages + [ChatMessage(role='assistant', content=assistant_text)]
 
     return {
         "ok": True,
