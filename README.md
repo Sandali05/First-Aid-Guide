@@ -76,18 +76,7 @@ for iterative development.
 
 ## System architecture
 
-```
-┌───────────────┐      ┌─────────────────────┐      ┌────────────────────┐
-│  React UI     │ ───► │  FastAPI endpoints  │ ───► │  Multi-agent core  │
-│ (Vite dev)    │      │  /api/chat(…)
-│               │      │  /api/health        │      │  Security → Triage │
-└───────────────┘      └─────────────────────┘      │  Retrieval → RAG   │
-        ▲                         │                  │  Guardrails → Risk │
-        │                         ▼                  └────────┬──────────┘
-        │           Astra DB / Embeddings (optional)          │
-        │           Mock MCP tools                             │
-        └──────────────────────────────────────────────────────┘
-```
+![System Architecture](docs/First-Aid-Guide.drawio.png)
 
 The backend is responsible for message triage, instruction generation, and risk
 scoring, while the frontend displays the structured assistant output in a chat
