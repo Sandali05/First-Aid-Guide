@@ -74,7 +74,7 @@ for iterative development.
 - **Minimal chat UI** – React client that maintains conversation state and
   interacts with the backend through Axios helpers.
 
-## 👷🏻‍♂System architecture
+## 👷🏻‍♂ System architecture
 
 ![System Architecture](docs/First-Aid-Guide.drawio.png)
 
@@ -108,7 +108,7 @@ The FastAPI application (`backend/app/main.py`) exposes `/api/chat` and
 Auxiliary services such as `services.vector_db` and `config.py` encapsulate
 provider configuration, error handling, and feature toggles.
 
-### 💻Frontend experience
+### 💻 Frontend experience
 
 The React client centers around `src/components/ChatUI.tsx`, which stores the
 conversation log and loading state. `src/api.ts` wraps Axios calls to the
@@ -116,7 +116,7 @@ backend. `App.tsx` renders the chat UI, while `main.tsx` mounts the application
 through Vite. The default development proxy forwards `/api` calls to whichever
 backend host is specified via `VITE_PROXY_TARGET`.
 
-## 🖲️Technology stack
+## 🖲️ Technology stack
 
 | Layer        | Technologies |
 | ------------ | ------------ |
@@ -125,7 +125,7 @@ backend host is specified via `VITE_PROXY_TARGET`.
 | Frontend     | React 18, TypeScript, Vite, Axios |
 | Tooling      | Docker, Docker Compose |
 
-## Project structure
+## 🧩Project structure
 
 ```
 first-aid-test/
@@ -153,12 +153,12 @@ first-aid-test/
 - (Optional) Astra DB account and API keys for retrieval-augmented generation
 - (Optional) OpenAI or Groq API keys for LLM-powered agents
 
-### Run with Docker Compose
+### 🐳 Run with Docker Compose
 
 ```bash
 docker compose up --build
 ```
-## Environment configuration
+## 🗄️ Environment configuration
 
 Copy `.env.example` (if present) or create a `.env` file in the backend folder
 to supply credentials and feature flags:
@@ -173,7 +173,7 @@ to supply credentials and feature flags:
 Environment variables are read by `backend/app/config.py` and can be overridden
 at runtime.
 
-## Development workflow
+## 🧩 Development workflow
 
 - **Backend linting/tests** – Add unit tests under `backend/app/tests` (not yet
   populated) and run them with `pytest`.
@@ -185,7 +185,7 @@ at runtime.
 - **Documentation** – Keep architectural updates synchronized with the docs in
   [`docs/`](docs/), especially `ARCHITECTURE.md`.
 
-## API surface
+## 🌐 API surface
 
 | Method | Endpoint              | Description                                   |
 | ------ | --------------------- | --------------------------------------------- |
