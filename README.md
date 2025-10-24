@@ -50,7 +50,7 @@ for iterative development.
 - 🌐 FastAPI Backend & React Frontend (Vite)
 - 🐳 Docker Compose for easy deployment
 
-## AI-Agents
+## 🤖 AI-Agents
 
 | Agent                    | Purpose                                                                                                                                      |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,7 +61,7 @@ for iterative development.
 | **Security Agent**       | Monitors user inputs, prevents malicious requests, and enforces API safety limits.                                                           |
 
 
-## Key capabilities
+## 🌟Key capabilities
 
 - **Automated triage** – Classifies incoming messages by incident type and
   severity to tailor the response and highlight critical scenarios.
