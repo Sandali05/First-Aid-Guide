@@ -28,6 +28,8 @@ _SEVERITY_HINTS = {
     "fracture": "high",
 }
 
+_SEVERITY_ORDER = {"low": 0, "medium": 1, "high": 2}
+
 _TOKEN_PATTERN = re.compile(r"[a-zA-Z]+", re.IGNORECASE)
 
 
@@ -88,13 +90,25 @@ def _rule_based_classification(text: str) -> Dict[str, object]:
             matched_keywords = keywords[:3]
             break
 
-    severity = "low"
-    if category in _SEVERITY_HINTS:
-        severity = _SEVERITY_HINTS[category]
-    elif any(term in lowered for term in ("severe", "heavy", "worse", "worsening", "can't breathe", "cant breathe")):
+    severity = _SEVERITY_HINTS.get(category, "low")
+
+    if any(
+        term in lowered
+        for term in (
+            "severe",
+            "heavy",
+            "spurting",
+            "worse",
+            "worsening",
+            "can't breathe",
+            "cant breathe",
+            "cannot breathe",
+        )
+    ):
         severity = "high"
     elif any(term in lowered for term in ("swelling", "bad", "painful", "deep", "large")):
-        severity = "medium"
+        if _SEVERITY_ORDER[severity] < _SEVERITY_ORDER["medium"]:
+            severity = "medium"
 
     return {"category": category, "severity": severity, "keywords": matched_keywords}
 
